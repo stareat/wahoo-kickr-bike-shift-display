@@ -31,3 +31,5 @@ A few things to consider:
 > #define myGearY 30
 
 4. Debugging: All Status messages during initiation and during connecting process will be displayed on the TFT and in the serial monitor window of the IDE. I tried to comment the code so that it is easier to understand.
+
+5. To identify BLE GATT servies and characteristics use https://www.bluetooth.com/specifications/assigned-numbers/ and/or https://www.nordicsemi.com/Products/Development-tools/nrf-connect-for-mobile
