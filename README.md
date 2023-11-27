@@ -1,10 +1,10 @@
-# wahoo-kickr-bike-shift-display
-Display Wahoo KICKR BIKE SHIFT Information (BLE/LILYGO T-Display-S3)
+# Externam Display for WAHOO KICKR BIKE SHIFT
+Code is written for LILYGO T-Display-S3 and DIsplays the following Bluetooth Low Energy (BLE) Date:
 
-- Takes the front and rear setting from the BLE information to draw the initial graph.
-- Updates the display (text and graph) when shifting
+- What gears you are currently in. Shows Information in text and as graphic. Updates the display (text and graph) when shifting.
+- Cycling Power Measurement (Watt or Watts Per Kilogram). Displayed information can be changed via a button (BOOT) on the device.
 
-
+## Setup
 You need to install the Arduino IDE to compile and upload the code to the microcontroller. A very good HOWTO can be found here:
 https://github.com/teastainGit/LilyGO-T-display-S3-setup-and-examples/blob/main/T-DisplayS3_Setup.txt
 
