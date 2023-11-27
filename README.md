@@ -4,7 +4,7 @@ Code is written for LILYGO T-Display-S3 and DIsplays the following Bluetooth Low
 - Gearing ratio (as set in the wahoo app) and what gears you are currently in. Information (text and graphic) will update when shifting.
 - Cycling Power Measurement (Watt or Watts Per Kilogram). Displayed information can be changed via a button (BOOT) on the device. (The rider weight must be set in the code!)
 
-[Alt text]([relative%20path/to/img.jpg](https://github.com/stareat/wahoo-kickr-bike-shift-display/blob/main/wahoo-kickr-bike-shift-display.jpeg)?raw=true "Title")
+![Image Alt text](/wahoo-kickr-bike-shift-display/wahoo-kickr-bike-shift-display.jpeg
 
 ## Setup
 You need to install the Arduino IDE to compile and upload the code to the microcontroller. A very good HOWTO can be found here:
