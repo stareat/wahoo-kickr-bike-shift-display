@@ -1,4 +1,4 @@
-# Externam Display for WAHOO KICKR BIKE SHIFT
+# External Display for WAHOO KICKR BIKE SHIFT
 Code is written for LILYGO T-Display-S3 and DIsplays the following Bluetooth Low Energy (BLE) Date:
 
 - Gearing ratio (as set in the wahoo app) and what gears you are currently in. Information (text and graphic) will update when shifting.
