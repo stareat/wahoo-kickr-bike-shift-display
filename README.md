@@ -16,9 +16,11 @@ https://github.com/teastainGit/LilyGO-T-display-S3-setup-and-examples/blob/main/
 > 
 > #define bleServerName "KICKR BIKE SHIFT 720C"
 
+
 2. If you want to use the power-to-weight ratio you must set your weight (kg) in the code:
 
 > #define WEIGHT 75
+
 
 3. The graphic should scale depending on the gearing setting, so it will fit the screen. (There are variables to change the rendering if necessary.)
 
@@ -31,6 +33,7 @@ https://github.com/teastainGit/LilyGO-T-display-S3-setup-and-examples/blob/main/
 > #define myGearX 15
 > 
 > #define myGearY 30
+
 
 4. Debugging: All Status messages during initiation and during connecting process will be displayed on the TFT and in the serial monitor window of the IDE. I tried to comment the code so that it is easier to understand.
 
