@@ -39,4 +39,6 @@ https://github.com/teastainGit/LilyGO-T-display-S3-setup-and-examples/blob/main/
 
 4. Debugging: All Status messages during initiation and during connecting process will be displayed on the TFT and in the serial monitor window of the IDE. I tried to comment the code so that it is easier to understand.
 
-5. To identify BLE GATT servies and characteristics use https://www.bluetooth.com/specifications/assigned-numbers/ and/or https://www.nordicsemi.com/Products/Development-tools/nrf-connect-for-mobile
+5. To identify BLE GATT servies and characteristics use https://www.bluetooth.com/specifications/assigned-numbers/ and if you look at GATT Specification Supplement 5 it describes how to intepret the bytes: https://www.bluetooth.com/specifications/specs/gatt-specification-supplement-5/
+   
+7. Scan BLE devices: https://www.nordicsemi.com/Products/Development-tools/nrf-connect-for-mobile
