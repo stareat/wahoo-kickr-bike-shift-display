@@ -42,3 +42,10 @@ https://github.com/teastainGit/LilyGO-T-display-S3-setup-and-examples/blob/main/
 5. To identify BLE GATT servies and characteristics use https://www.bluetooth.com/specifications/assigned-numbers/ and if you look at GATT Specification Supplement 5 it describes how to intepret the bytes: https://www.bluetooth.com/specifications/specs/gatt-specification-supplement-5/
    
 7. Scan BLE devices: https://www.nordicsemi.com/Products/Development-tools/nrf-connect-for-mobile
+
+Enter the upload mode manually.
+- Connect the board via the USB cable
+- Press and hold the BOOT button (next to RST) , While still pressing the BOOT button, press RST
+- Release the RST
+- Release the BOOT button
+- Upload sketch
