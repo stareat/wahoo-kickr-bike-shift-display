@@ -12,9 +12,11 @@ You need to install the Arduino IDE to compile and upload the code to the microc
 https://github.com/teastainGit/LilyGO-T-display-S3-setup-and-examples/blob/main/T-DisplayS3_Setup.txt
 
 ## TFT_eSPI - ..\libraries\TFT_eSPI\User_Setup_Select
-The line ""#include <User_Setups/Setup206_LilyGo_T_Display_S3.h>" should be 
-- un-commented for LILYGO T-Display-S3 ESP32-S3
-- commented for LILYGO TTGO T-Display ESP32
+Comment and un-comment the following lines depending on which board you use.
+
+> #include <User_Setups/Setup25_TTGO_T_Display.h>
+>
+> #include <User_Setups/Setup206_LilyGo_T_Display_S3.h>
 
 ## A few things to consider
 
