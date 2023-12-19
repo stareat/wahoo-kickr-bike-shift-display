@@ -12,8 +12,8 @@ TFT_eSprite sprGearText = TFT_eSprite(&tft);
 TFT_eSprite sprPowerText = TFT_eSprite(&tft);
 
 // RESOLUTION
-// 170 x 320 ... LILYGO T-Display-S3 ESP32-S3
-// 135 x 240 ... LILYGO TTGO T-Display ESP32
+// 320 x 170 ... LILYGO T-Display-S3 ESP32-S3
+// 240 x 135 ... LILYGO TTGO T-Display ESP32
 #define RESOLUTION_X 320
 #define RESOLUTION_Y 170
 
@@ -38,8 +38,9 @@ bool bolToggleScreen = false;
 
 // BLE Server name
 #define bleServerName "KICKR BIKE SHIFT 720C"
-// Rider Weight
-#define WEIGHT 75
+
+// WEIGHT
+float flUserWeight = 1;
 
 // Gearing
 // BLE Service (UUID is case sensitive)
@@ -67,6 +68,8 @@ static BLEAddress *pServerAddress;
 BLERemoteCharacteristic *pRemoteCharacteristic_1;
 // Power
 BLERemoteCharacteristic *pRemoteCharacteristic_2;
+// Weight
+BLERemoteCharacteristic *pRemoteCharacteristic_3;
 
 void DisplayText(String myDebug)
 {
@@ -84,7 +87,6 @@ void DisplayText(String myDebug)
   Serial.println(myDebug);
 
   sprDebug.pushSprite(0, 0);
-  // sprDebug.deleteSprite();
 }
 
 class MyClientCallback : public BLEClientCallbacks
@@ -139,6 +141,17 @@ bool connectToServer(BLEAddress pAddress)
   }
   DisplayText("Found our Service UUID2");
 
+  // Weight
+  BLERemoteService *pRemoteService3 = pClient->getService(serviceUUID3);
+  if (pRemoteService3 == nullptr)
+  {
+    myDisplay = "Failed to find our service UUID3: " + String(serviceUUID3.toString().c_str());
+    DisplayText(myDisplay);
+    pClient->disconnect();
+    return false;
+  }
+  DisplayText("Found our Service UUID3");
+
   connected = true;
 
   // Gearing
@@ -155,6 +168,13 @@ bool connectToServer(BLEAddress pAddress)
     connected = false;
   }
 
+  // Weight
+  pRemoteCharacteristic_3 = pRemoteService3->getCharacteristic(charUUID31);
+  if (connectCharacteristic3(pRemoteService3, pRemoteCharacteristic_3) == false)
+  {
+    connected = false;
+  }
+
   if (connected == false)
   {
     pClient->disconnect();
@@ -165,6 +185,7 @@ bool connectToServer(BLEAddress pAddress)
   return true;
 }
 
+// Gearing
 bool connectCharacteristic1(BLERemoteService *pRemoteService, BLERemoteCharacteristic *pRemoteCharacteristic)
 {
   // Obtain a reference to the characteristics in the service of the remote BLE server.
@@ -182,6 +203,7 @@ bool connectCharacteristic1(BLERemoteService *pRemoteService, BLERemoteCharacter
   return true;
 }
 
+// Power
 bool connectCharacteristic2(BLERemoteService *pRemoteService, BLERemoteCharacteristic *pRemoteCharacteristic)
 {
   // Obtain a reference to the characteristics in the service of the remote BLE server.
@@ -195,6 +217,41 @@ bool connectCharacteristic2(BLERemoteService *pRemoteService, BLERemoteCharacter
   // Assign callback functions for the Characteristic(s)
   if (pRemoteCharacteristic->canNotify())
     pRemoteCharacteristic->registerForNotify(notifyCallback2);
+
+  return true;
+}
+
+// Weight
+bool connectCharacteristic3(BLERemoteService *pRemoteService, BLERemoteCharacteristic *pRemoteCharacteristic)
+{
+  // Obtain a reference to the characteristics in the service of the remote BLE server.
+  if (pRemoteCharacteristic == nullptr)
+  {
+    DisplayText("Failed to find our characteristic UUID3");
+    return false;
+  }
+  DisplayText("Found our Characteristic 3");
+
+  // No callback needed - we only need to read the weight once
+  if(pRemoteCharacteristic->canRead()) {
+
+    // we're expecting a 2 Byte HEX value eg "D039" 
+    std::string rxValue = pRemoteCharacteristic->readValue();
+
+    /*
+    // DEBUG
+    Serial.println(rxValue[0],HEX);
+    Serial.println(rxValue[1],HEX);
+    */
+
+    // Endianness is little-endian
+    // so lets swap bytes and then combine two uint8_t as uint16_tbit
+    // bitshift the left by 8 bits to make them the 8 most significant bits of our new value
+    uint16_t tmp16 = (rxValue[1] << 8 | rxValue[0]);
+    int intWeight = (int)(tmp16);
+    flUserWeight = (float(intWeight) * 0.005);
+    DisplayText("Cyclist weight: " + String(flUserWeight));
+  }  
 
   return true;
 }
@@ -217,6 +274,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
   }
 };
 
+// Gearing
 // When the BLE Server sends a new value reading with the notify property
 int currentFrontGear = 0;
 int currentRearGear = 0;
@@ -251,11 +309,13 @@ static void notifyCallback1(BLERemoteCharacteristic *pBLERemoteCharacteristic, u
   */
 }
 
+// Power
 static void notifyCallback2(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
 {
+  // Combining two uint8_t as uint16_t
   uint16_t tmp16 = (pData[3] << 8 | pData[2]);
   int intPower = (int)(tmp16);
-  float flPowerToWeight = (float(intPower)/float(WEIGHT));
+  float flPowerToWeight = (float(intPower) / float(flUserWeight));
 
   // Button Toggle
   if (bolToggleScreen)
@@ -297,8 +357,7 @@ void setup()
 void GearGraph(int myFrontGears, int myRearGears, int selectedFrontGear, int selectedRearGear)
 {
   // Size of Graph
-  // #define IWIDTH 190
-  #define IWIDTH 190
+  #define IWIDTH ((RESOLUTION_X/5)*3)
   #define IHEIGHT RESOLUTION_Y
 
   sprGearGraph.setColorDepth(16);
@@ -307,7 +366,7 @@ void GearGraph(int myFrontGears, int myRearGears, int selectedFrontGear, int sel
   // Background Color
   sprGearGraph.fillSprite(myColorBackground);
 
-  int myGearWidth = (IWIDTH - 35) / (myFrontGears + myRearGears);
+  int myGearWidth = (IWIDTH - 30) / (myFrontGears + myRearGears);
   #define myGearHeight (RESOLUTION_Y - 60)
   #define myGearSpacing -1
   #define myGearX 15
@@ -341,15 +400,15 @@ void GearGraph(int myFrontGears, int myRearGears, int selectedFrontGear, int sel
     }
   }
 
-  sprGearGraph.pushSprite(130, 0);
+  sprGearGraph.pushSprite(((RESOLUTION_X/5)*2), 0);
   sprGearGraph.deleteSprite();
 }
 
 void GearText(int selectedFrontGear, int selectedRearGear)
 {
-  // Size of Graph
-  #define IWIDTH 130
-  #define IHEIGHT (RESOLUTION_Y / 2)
+// Size of Graph
+#define IWIDTH ((RESOLUTION_X/5)*2)
+#define IHEIGHT (RESOLUTION_Y / 2)
 
   sprGearText.setColorDepth(16);
   sprGearText.createSprite(IWIDTH, IHEIGHT);
@@ -360,7 +419,7 @@ void GearText(int selectedFrontGear, int selectedRearGear)
   sprGearText.loadFont(digits);
   sprGearText.setTextColor(myColorFont, myColorBgFont);
   sprGearText.setTextDatum(MC_DATUM);
-  sprGearText.drawString(String(selectedFrontGear + 1) + ":" + String(selectedRearGear + 1), IWIDTH/2, (IHEIGHT/2)+5);
+  sprGearText.drawString(String(selectedFrontGear + 1) + ":" + String(selectedRearGear + 1), IWIDTH / 2, (IHEIGHT / 2) + 5);
   sprGearText.unloadFont();
 
   sprGearText.pushSprite(0, 0);
@@ -369,9 +428,9 @@ void GearText(int selectedFrontGear, int selectedRearGear)
 
 void PowerText(String strPower)
 {
-  // Size of Graph
-  #define IWIDTH 130
-  #define IHEIGHT (RESOLUTION_Y / 2)
+// Size of Graph
+#define IWIDTH ((RESOLUTION_X/5)*2)
+#define IHEIGHT (RESOLUTION_Y / 2)
 
   sprPowerText.setColorDepth(16);
   sprPowerText.createSprite(IWIDTH, IHEIGHT);
@@ -382,7 +441,7 @@ void PowerText(String strPower)
   sprPowerText.loadFont(digits);
   sprPowerText.setTextColor(myColorFont, myColorBgPower);
   sprPowerText.setTextDatum(MC_DATUM);
-  sprPowerText.drawString(strPower, IWIDTH/2, (IHEIGHT/2)+5);
+  sprPowerText.drawString(strPower, IWIDTH / 2, (IHEIGHT / 2) + 5);
   sprPowerText.unloadFont();
 
   sprPowerText.pushSprite(0, IHEIGHT);
