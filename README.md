@@ -24,11 +24,12 @@ The line ""#include <User_Setups/Setup206_LilyGo_T_Display_S3.h>" should be
 > 
 > #define bleServerName "KICKR BIKE SHIFT 720C"
 
-
-2. If you want to use the power-to-weight ratio you must set your weight (kg) in the code:
-
-> #define WEIGHT 75
-
+2. Display Resolution
+170 x 320 ... LILYGO T-Display-S3 ESP32-S3
+135 x 240 ... LILYGO TTGO T-Display ESP32
+   
+> #define RESOLUTION_X 320
+> #define RESOLUTION_Y 170
 
 3. The graphic should scale depending on the gearing setting, so it will fit the screen. (There are variables to change the rendering if necessary.)
 
