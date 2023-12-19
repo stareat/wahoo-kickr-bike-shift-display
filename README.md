@@ -44,6 +44,7 @@ Comment and un-comment the following lines in the "..\libraries\TFT_eSPI\User_Se
 > 
 > #define myGearY 30
 
+## Development Notes
 
 4. Debugging: All Status messages during initiation and during connecting process will be displayed on the TFT and in the serial monitor window of the IDE. I tried to comment the code so that it is easier to understand.
 
@@ -51,7 +52,7 @@ Comment and un-comment the following lines in the "..\libraries\TFT_eSPI\User_Se
    
 7. Scan BLE devices: https://www.nordicsemi.com/Products/Development-tools/nrf-connect-for-mobile
 
-Enter the upload mode manually.
+Enter the upload mode for Sketch upload manually.
 - Connect the board via the USB cable
 - Press and hold the BOOT button (next to RST) , While still pressing the BOOT button, press RST
 - Release the RST
