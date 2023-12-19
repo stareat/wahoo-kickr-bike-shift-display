@@ -24,9 +24,7 @@ The line ""#include <User_Setups/Setup206_LilyGo_T_Display_S3.h>" should be
 > 
 > #define bleServerName "KICKR BIKE SHIFT 720C"
 
-2. Display Resolution
-170 x 320 ... LILYGO T-Display-S3 ESP32-S3
-135 x 240 ... LILYGO TTGO T-Display ESP32
+2. Set Display Resolution "170 x 320" for LILYGO T-Display-S3 ESP32-S3 or "135 x 240" for LILYGO TTGO T-Display ESP32
    
 > #define RESOLUTION_X 320
 > 
