@@ -1,5 +1,5 @@
 # External Display for WAHOO KICKR BIKE SHIFT
-Code is written for LILYGO T-Display-S3 and displays the following Bluetooth Low Energy (BLE) data:
+Code is written for LILYGO T-Display-S3 ESP32-S3 or LILYGO TTGO T-Display ESP32 and displays the following Bluetooth Low Energy (BLE) data:
 
 - Gearing ratio (as set in the wahoo app) and what gears you are currently in. Information (text and graphic) will update when shifting.
 - Cycling power measurement (Watt or Watts Per Kilogram). Displayed information can be changed via a button (BOOT) on the device. (The rider weight must be set in the code!)
