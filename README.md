@@ -10,6 +10,11 @@ Code is written for LILYGO T-Display-S3 ESP32-S3 or LILYGO TTGO T-Display ESP32 
 You need to install the Arduino IDE to compile and upload the code to the microcontroller. A very good HOWTO can be found here:
 https://github.com/teastainGit/LilyGO-T-display-S3-setup-and-examples/blob/main/T-DisplayS3_Setup.txt
 
+## TFT_eSPI - ..\libraries\TFT_eSPI\User_Setup_Select
+The line ""#include <User_Setups/Setup206_LilyGo_T_Display_S3.h>" should be 
+- un-commented for LILYGO T-Display-S3 ESP32-S3
+- commented for LILYGO TTGO T-Display ESP32
+
 ## A few things to consider
 
 1. If you have changed the Bluetooth name of your bike (in the wahoo app) you will need to change it also in the code:
