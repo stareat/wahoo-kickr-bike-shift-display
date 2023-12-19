@@ -29,6 +29,7 @@ The line ""#include <User_Setups/Setup206_LilyGo_T_Display_S3.h>" should be
 135 x 240 ... LILYGO TTGO T-Display ESP32
    
 > #define RESOLUTION_X 320
+> 
 > #define RESOLUTION_Y 170
 
 3. The graphic should scale depending on the gearing setting, so it will fit the screen. (There are variables to change the rendering if necessary.)
