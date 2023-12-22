@@ -77,3 +77,10 @@ Section "3.59.2.1 Flags field" tells us which values are submitted:
 - Accumulated Energy Present: False
 - Offset Compensation Indicator : False
 
+So the values in the characteristic are:
+|Flags field|Instantaneous Power|Accumulated Torque|Cumulative Wheel|Revolutions|Last Wheel Event Time|Cumulative Crank Revolutions|Last Crank
+Event Time|
+|Mandatory|Mandatory|Optional|Optional|Optional|Optional|Optional|Optional|
+|0 - uint16|1|2|3|4|5|6||
+|[0][1]|[2][3]|[4][5]|[6][7]|[8][9]|[10][11]|[12][13]|[14][15]|
+
