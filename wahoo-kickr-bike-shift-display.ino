@@ -550,7 +550,7 @@ void CadenceText(String strCadence)
   sprCadenceText.drawString(strCadence, IWIDTH / 2, (IHEIGHT / 2) + 5);
   sprCadenceText.unloadFont();
 
-  sprCadenceText.pushSprite(((RESOLUTION_X/5)*3), IHEIGHT);
+  sprCadenceText.pushSprite(((RESOLUTION_X/5)*2), IHEIGHT);
   sprCadenceText.deleteSprite();
 }
 
