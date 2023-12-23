@@ -60,7 +60,7 @@ Enter the upload mode for Sketch upload manually.
 - Upload sketch
 
 ### Cycling Power Measurement (Power & Cadence)
-As mentioned in the GATT Specification Supplement document the Service 0x1818 holds the characteristic 0x2A63. The first UINT16 (unsigned 16-bits integer) holds the FLAGS in our Case "3C00" (as little-endian) and so we get "00000000 00111100". Section "3.59.2.1 Flags field" tells us which values are submitted:
+As mentioned in the GATT Specification Supplement document the Service 0x1818 holds the characteristic 0x2A63. The first UINT16 (unsigned 16-bits integer) holds the FLAGS. In our Case "3C00" (as little-endian) and so we get "00000000 00111100". Section "3.59.2.1 Flags field" in the document tells us which values are beeing submitted:
 
 - Pedal Power Balance Present: False
 - Pedal Power Balance Reference: Unknown
