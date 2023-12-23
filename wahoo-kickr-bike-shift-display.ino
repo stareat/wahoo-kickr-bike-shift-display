@@ -10,12 +10,13 @@ TFT_eSprite sprDebug = TFT_eSprite(&tft);
 TFT_eSprite sprGearGraph = TFT_eSprite(&tft);
 TFT_eSprite sprGearText = TFT_eSprite(&tft);
 TFT_eSprite sprPowerText = TFT_eSprite(&tft);
+TFT_eSprite sprCadenceText = TFT_eSprite(&tft);
 
 // RESOLUTION
 // 320 x 170 ... LILYGO T-Display-S3 ESP32-S3
 // 240 x 135 ... LILYGO TTGO T-Display ESP32
-#define RESOLUTION_X 320
-#define RESOLUTION_Y 170
+#define RESOLUTION_X 240
+#define RESOLUTION_Y 135
 
 // BUTTON
 #define BUTTON_PIN 0
@@ -30,17 +31,33 @@ bool bolToggleScreen = false;
 // https://barth-dev.de/online/rgb565-color-picker/
 #define myColorGearBorder 0xFFFF
 #define myColorGearSelected 0xEB61
-#define myColorPurple 0xC415
 #define myColorFont 0xFFFF
 #define myColorBgFont 0x02AE
 #define myColorBgPower 0xBBD4
+#define myColorBgCadence 0x75D1
 #define myColorBackground 0x5454
 
 // BLE Server name
 #define bleServerName "KICKR BIKE SHIFT 720C"
 
-// WEIGHT
+// Weight
 float flUserWeight = 1;
+
+// Cadence
+// Crank Event Time
+float NewCrankEventTime;
+float DiffCrankEventTime;
+float OldCrankEventTime;
+float CrankEventTime;
+// Crank Revolutions
+float NewCrankRevolutions;
+float OldCrankRevolutions;
+float DiffCrankRevolutions;
+
+//Our Cadence
+int Cadence = 0;
+int OldCadence = 0;
+int prevCrankStaleness = 0;
 
 // Gearing
 // BLE Service (UUID is case sensitive)
@@ -48,7 +65,7 @@ static BLEUUID serviceUUID1("a026ee0d-0a7d-4ab3-97fa-f1500f9feb8b");
 // BLE Characteristics
 static BLEUUID charUUID11("a026e03a-0a7d-4ab3-97fa-f1500f9feb8b");
 
-// Power Measurement
+// Cycling Power Measurement
 static BLEUUID serviceUUID2("00001818-0000-1000-8000-00805f9b34fb");
 static BLEUUID charUUID21("00002a63-0000-1000-8000-00805f9b34fb");
 
@@ -66,7 +83,7 @@ static BLEAddress *pServerAddress;
 // Characteristicd that we want to read
 // Gearing
 BLERemoteCharacteristic *pRemoteCharacteristic_1;
-// Power
+// Cycling Power Measurement
 BLERemoteCharacteristic *pRemoteCharacteristic_2;
 // Weight
 BLERemoteCharacteristic *pRemoteCharacteristic_3;
@@ -130,7 +147,7 @@ bool connectToServer(BLEAddress pAddress)
   }
   DisplayText("Found our Service UUID1");
 
-  // Power
+  // Cycling Power Measurement
   BLERemoteService *pRemoteService2 = pClient->getService(serviceUUID2);
   if (pRemoteService2 == nullptr)
   {
@@ -161,7 +178,7 @@ bool connectToServer(BLEAddress pAddress)
     connected = false;
   }
 
-  // Power
+  // Cycling Power Measurement
   pRemoteCharacteristic_2 = pRemoteService2->getCharacteristic(charUUID21);
   if (connectCharacteristic2(pRemoteService2, pRemoteCharacteristic_2) == false)
   {
@@ -203,7 +220,7 @@ bool connectCharacteristic1(BLERemoteService *pRemoteService, BLERemoteCharacter
   return true;
 }
 
-// Power
+// Cycling Power Measurement
 bool connectCharacteristic2(BLERemoteService *pRemoteService, BLERemoteCharacteristic *pRemoteCharacteristic)
 {
   // Obtain a reference to the characteristics in the service of the remote BLE server.
@@ -309,13 +326,76 @@ static void notifyCallback1(BLERemoteCharacteristic *pBLERemoteCharacteristic, u
   */
 }
 
-// Power
+// Cycling Power Measurement
 static void notifyCallback2(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
 {
-  // Combining two uint8_t as uint16_t
+  // According to the GATT Specification Supplement (Bluetooth Specification) the following values are submitted
+  // [0][1] ... Flags field = [3C][00] == "00000000 00111100" (Mandatory)
+  // [2][3] ... Instantaneous Power (Mandatory)
+  // [4][5] ... Accumulated Torque
+  // [6][7][8][9] ... Wheel Revolution Data - Cumulative Wheel Revolutions
+  // [10][11] ... Last Wheel Event Time
+  // [12][13] ... Crank Revolution Data - Cumulative Crank Revolutions
+  // [14][15] ... Crank Revolution Data - Last Crank Event Time
+
+  // Instantaneous Power
+  // Endianness is little-endian
+  // so lets swap bytes and then combine two uint8_t as uint16_tbit
+  // bitshift the left by 8 bits to make them the 8 most significant bits of our new value
   uint16_t tmp16 = (pData[3] << 8 | pData[2]);
   int intPower = (int)(tmp16);
   float flPowerToWeight = (float(intPower) / float(flUserWeight));
+
+  // Cadence
+
+  // Last Crank Event Time (Unit is 1/1024 second)
+  // Endianness is little-endian
+  // so lets swap bytes and then combine two uint8_t as uint16_tbit
+  // bitshift the left by 8 bits to make them the 8 most significant bits of our new value
+  NewCrankEventTime = pData[14] + pData[15]*256;
+
+  // Difference between new & old in 1/1024 seconds
+  DiffCrankEventTime = NewCrankEventTime - OldCrankEventTime;
+
+  // Preventing an overflow: uint16 can not exceed 65535 (maximum)
+  if (DiffCrankEventTime < 0) { 
+    DiffCrankEventTime = DiffCrankEventTime + 65535;
+  }  
+  
+  // in seconds
+  CrankEventTime = float(DiffCrankEventTime) / 1024; 
+
+  // Cumulative Crank Revolutions
+  NewCrankRevolutions = pData[12] + pData[13]*256;   
+  //Difference between new % old 
+  DiffCrankRevolutions = NewCrankRevolutions - OldCrankRevolutions;
+
+  // Preventing an overflow: uint16 can not exceed 65535 (maximum)
+  if (DiffCrankRevolutions < 0) { 
+    DiffCrankRevolutions = DiffCrankRevolutions + 65535;
+  }    
+
+  // In Case Cadence Drops (notify between new crank revolution), we use OldCadence 
+  if (CrankEventTime > 0) {
+    prevCrankStaleness = 0;
+    Cadence = DiffCrankRevolutions / CrankEventTime * 60;
+    OldCadence = Cadence;
+  } else if (CrankEventTime == 0 && prevCrankStaleness < 10 ) {
+    Cadence = OldCadence;
+    prevCrankStaleness += 1;
+  } else if (prevCrankStaleness >= 10) {
+    Cadence = 0;
+  }
+  CadenceText(String(Cadence));
+  
+  // Serial.println("DiffCrankEventTime: " + String(DiffCrankEventTime));
+  // Serial.println("CrankEventTime: " + String(CrankEventTime));
+  // Serial.println("DiffCrankRevolutions: " + String(DiffCrankRevolutions));
+  // Serial.println("Cadence Calc/Flat: " + String(DiffCrankRevolutions / CrankEventTime * 60) + " / " + String(Cadence) + " Rpm");
+  // Serial.println("---");
+  
+  OldCrankEventTime = NewCrankEventTime;
+  OldCrankRevolutions = NewCrankRevolutions;
 
   // Button Toggle
   if (bolToggleScreen)
@@ -446,6 +526,28 @@ void PowerText(String strPower)
 
   sprPowerText.pushSprite(0, IHEIGHT);
   sprPowerText.deleteSprite();
+}
+
+void CadenceText(String strCadence)
+{
+// Size of Graph
+#define IWIDTH ((RESOLUTION_X/5)*2)
+#define IHEIGHT (RESOLUTION_Y / 2)
+
+  sprCadenceText.setColorDepth(16);
+  sprCadenceText.createSprite(IWIDTH, IHEIGHT);
+  sprCadenceText.fillSprite(myColorBgCadence);
+  // Draw a background
+  sprCadenceText.fillRect(0, 0, IWIDTH, IHEIGHT, myColorBgCadence);
+
+  sprCadenceText.loadFont(digits);
+  sprCadenceText.setTextColor(myColorFont, myColorBgCadence);
+  sprCadenceText.setTextDatum(MC_DATUM);
+  sprCadenceText.drawString(strCadence, IWIDTH / 2, (IHEIGHT / 2) + 5);
+  sprCadenceText.unloadFont();
+
+  sprCadenceText.pushSprite(IWIDTH, IHEIGHT);
+  sprCadenceText.deleteSprite();
 }
 
 void loop()
