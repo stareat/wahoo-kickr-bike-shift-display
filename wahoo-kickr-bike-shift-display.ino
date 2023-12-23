@@ -15,8 +15,8 @@ TFT_eSprite sprCadenceText = TFT_eSprite(&tft);
 // RESOLUTION
 // 320 x 170 ... LILYGO T-Display-S3 ESP32-S3
 // 240 x 135 ... LILYGO TTGO T-Display ESP32
-#define RESOLUTION_X 240
-#define RESOLUTION_Y 135
+#define RESOLUTION_X 320
+#define RESOLUTION_Y 170
 
 // BUTTON
 #define BUTTON_PIN 0
@@ -386,6 +386,10 @@ static void notifyCallback2(BLERemoteCharacteristic *pBLERemoteCharacteristic, u
   } else if (prevCrankStaleness >= 10) {
     Cadence = 0;
   }
+
+  //Just some init correction
+  if (Cadence > 1000) { Cadence=0; }
+
   CadenceText(String(Cadence));
   
   // Serial.println("DiffCrankEventTime: " + String(DiffCrankEventTime));
@@ -531,7 +535,7 @@ void PowerText(String strPower)
 void CadenceText(String strCadence)
 {
 // Size of Graph
-#define IWIDTH ((RESOLUTION_X/5)*2)
+#define IWIDTH ((RESOLUTION_X/5)*3)
 #define IHEIGHT (RESOLUTION_Y / 2)
 
   sprCadenceText.setColorDepth(16);
@@ -546,7 +550,7 @@ void CadenceText(String strCadence)
   sprCadenceText.drawString(strCadence, IWIDTH / 2, (IHEIGHT / 2) + 5);
   sprCadenceText.unloadFont();
 
-  sprCadenceText.pushSprite(IWIDTH, IHEIGHT);
+  sprCadenceText.pushSprite(((RESOLUTION_X/5)*3), IHEIGHT);
   sprCadenceText.deleteSprite();
 }
 
