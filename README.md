@@ -3,7 +3,8 @@ Code is written for LILYGO T-Display-S3 ESP32-S3 or LILYGO TTGO T-Display ESP32 
 
 - Gearing ratio (as set in the wahoo app) and what gears you are currently in. Information (text and graphic) will update when shifting.
 - Cyclist weight (as set in the wahoo app)
-- Cycling power measurement (Watt or Watts Per Kilogram). Displayed information can be changed via a button (BOOT) on the device.
+- Cycling power (Watt or watts per kilogram). Displayed information can be changed via a button (BOOT) on the device.
+- Cycling cadence (RPM - revolutions per minute)
 
 ![alt text](wahoo-kickr-bike-shift-display.jpeg)
 
