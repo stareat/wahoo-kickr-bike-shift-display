@@ -88,4 +88,7 @@ So the values in the characteristic are:
 ### FONT for ESP32 LCD
 - Install selected Google Font
 - Install Processing - https://processing.org/download
-- - Select "Toools" - "Create Font" and after selecting the font the ".vlw" file will be created in the "\data" folder.
+   - Select "Toools" - "Create Font" and after selecting the font the ".vlw" file will be created in the "\data" folder.
+- Covert ".vlw" to binary - https://tomeko.net/online_tools/file_to_hex.php?lang=en
+   - copy to clipboard an create a ".h" file and add constructor
+   - const uint8_t  FontName[] PROGMEM = { BINARY };
