@@ -85,3 +85,7 @@ So the values in the characteristic are:
 | 0 - uint16 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 
 | [0][1] | [2][3] | [4][5] | [6][7] | [8][9] | [10][11] | [12][13] | [14][15] | 
 
+### FONT for ESP32 LCD
+- Install selected Google Font
+- Install Processing - https://processing.org/download
+- - Select "Toools" - "Create Font" and after selecting the font the ".vlw" file will be created in the "\data" folder.
