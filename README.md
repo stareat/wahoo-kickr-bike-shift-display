@@ -6,7 +6,7 @@ Code is written for LILYGO T-Display-S3 ESP32-S3 or LILYGO TTGO T-Display ESP32 
 - Cycling cadence (RPM - revolutions per minute)
 - Cyclist weight (as set in the wahoo app) - Not visible on the display but used to calculate W/kg
 
-![alt text](wahoo-kickr-bike-shift-display.jpeg)
+![in use example](wahoo-kickr-bike-shift-display.jpeg)
 
 ## Setup
 You need to install the Arduino IDE to compile and upload the code to the microcontroller. A very good HOWTO can be found here:
