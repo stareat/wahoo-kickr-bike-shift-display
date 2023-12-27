@@ -1,5 +1,6 @@
 #include "NotoSansBold15.h"
 #include "PathwayGothicOneRegular65.h"
+#include "PathwayGothicOneRegular55.h"
 #include "BLEDevice.h"
 #include <SPI.h>
 #include <TFT_eSPI.h>
@@ -7,7 +8,7 @@
 // TFT
 TFT_eSPI tft = TFT_eSPI();
 TFT_eSprite sprDebug = TFT_eSprite(&tft);
-TFT_eSprite sprGearGraph = TFT_eSprite(&tft);
+TFT_eSprite sprGearingGraph = TFT_eSprite(&tft);
 TFT_eSprite sprGearText = TFT_eSprite(&tft);
 TFT_eSprite sprPowerText = TFT_eSprite(&tft);
 TFT_eSprite sprCadenceText = TFT_eSprite(&tft);
@@ -25,9 +26,10 @@ bool bolToggleScreen = false;
 
 // FONTS
 #define small NotoSansBold15
-#define digits PathwayGothicOneRegular65
+#define digits65 PathwayGothicOneRegular65
+#define digits55 PathwayGothicOneRegular55
 
-// COLORS
+// COLORS in RGB565
 // https://barth-dev.de/online/rgb565-color-picker/
 #define myColorGearBorder 0xFFFF
 #define myColorGearSelected 0xEB61
@@ -36,6 +38,11 @@ bool bolToggleScreen = false;
 #define myColorBgPower 0xBBD4
 #define myColorBgCadence 0x75D1
 #define myColorBackground 0x5454
+
+// DEBUG
+int AdvertisingIntervalNew = 0;
+int AdvertisingIntervalOld = 0;
+int AdvertisingInterval = 0;
 
 // BLE Server name
 #define bleServerName "KICKR BIKE SHIFT 720C"
@@ -309,8 +316,8 @@ static void notifyCallback1(BLERemoteCharacteristic *pBLERemoteCharacteristic, u
   if (currentFrontGear != pData[2] || currentRearGear != pData[3])
   {
     // Draw Graphics
-    GearGraph(pData[4], pData[5], pData[2], pData[3]);
-    GearText(pData[2], pData[3]);
+    GearingGraph(pData[4], pData[5], pData[2], pData[3]);
+    GearingText(pData[2], pData[3]);
   }
   currentFrontGear = pData[2];
   currentRearGear = pData[3];
@@ -329,6 +336,13 @@ static void notifyCallback1(BLERemoteCharacteristic *pBLERemoteCharacteristic, u
 // Cycling Power Measurement
 static void notifyCallback2(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
 {
+  // DEBUG --------
+  AdvertisingIntervalNew = millis();
+  AdvertisingInterval = (AdvertisingIntervalNew-AdvertisingIntervalOld);
+  Serial.println("(" + String(AdvertisingIntervalNew) + " - " + String(AdvertisingIntervalOld) + ") = " + String(AdvertisingInterval));  
+  AdvertisingIntervalOld = AdvertisingIntervalNew;
+  // END DEBUG ----
+
   // According to the GATT Specification Supplement (Bluetooth Specification) the following values are submitted
   // [0][1] ... Flags field = [3C][00] == "00000000 00111100" (Mandatory)
   // [2][3] ... Instantaneous Power (Mandatory)
@@ -438,35 +452,35 @@ void setup()
 }
 
 // Graphics ---------------------------------------------
-void GearGraph(int myFrontGears, int myRearGears, int selectedFrontGear, int selectedRearGear)
+void GearingGraph(int myFrontGears, int myRearGears, int selectedFrontGear, int selectedRearGear)
 {
   // Size of Graph
   #define IWIDTH ((RESOLUTION_X/5)*3)
   #define IHEIGHT RESOLUTION_Y
 
-  sprGearGraph.setColorDepth(16);
+  sprGearingGraph.setColorDepth(16);
   // create sprite with size of screen
-  sprGearGraph.createSprite(IWIDTH, IHEIGHT);
+  sprGearingGraph.createSprite(IWIDTH, IHEIGHT);
   // Background Color
-  sprGearGraph.fillSprite(myColorBackground);
+  sprGearingGraph.fillSprite(myColorBackground);
 
   int myGearWidth = (IWIDTH - 30) / (myFrontGears + myRearGears);
-  #define myGearHeight (RESOLUTION_Y - 60)
+  #define myGearHeight (RESOLUTION_Y - 90)
   #define myGearSpacing -1
   #define myGearX 15
-  #define myGearY 30
+  #define myGearY 10
 
   // FRONT GEARS (CHAINRINGS/CRANKSET)
   for (int i = 0; i < (myFrontGears); i++)
   {
     if (selectedFrontGear == i)
     {
-      sprGearGraph.fillRect(myGearX + i * (myGearWidth + myGearSpacing), myGearY + (myFrontGears - i - 1) * (myGearHeight / (myFrontGears * 2)), myGearWidth, (i + 1) * (myGearHeight / myFrontGears), myColorGearSelected);
-      sprGearGraph.drawRect(myGearX + i * (myGearWidth + myGearSpacing), myGearY + (myFrontGears - i - 1) * (myGearHeight / (myFrontGears * 2)), myGearWidth, (i + 1) * (myGearHeight / myFrontGears), myColorGearBorder);
+      sprGearingGraph.fillRect(myGearX + i * (myGearWidth + myGearSpacing), myGearY + (myFrontGears - i - 1) * (myGearHeight / (myFrontGears * 2)), myGearWidth, (i + 1) * (myGearHeight / myFrontGears), myColorGearSelected);
+      sprGearingGraph.drawRect(myGearX + i * (myGearWidth + myGearSpacing), myGearY + (myFrontGears - i - 1) * (myGearHeight / (myFrontGears * 2)), myGearWidth, (i + 1) * (myGearHeight / myFrontGears), myColorGearBorder);
     }
     else
     {
-      sprGearGraph.drawRect(myGearX + i * (myGearWidth + myGearSpacing), myGearY + (myFrontGears - i - 1) * (myGearHeight / (myFrontGears * 2)), myGearWidth, (i + 1) * (myGearHeight / myFrontGears), myColorGearBorder);
+      sprGearingGraph.drawRect(myGearX + i * (myGearWidth + myGearSpacing), myGearY + (myFrontGears - i - 1) * (myGearHeight / (myFrontGears * 2)), myGearWidth, (i + 1) * (myGearHeight / myFrontGears), myColorGearBorder);
     }
   }
 
@@ -475,24 +489,24 @@ void GearGraph(int myFrontGears, int myRearGears, int selectedFrontGear, int sel
   {
     if (selectedRearGear == i)
     {
-      sprGearGraph.fillRect(20 + (myGearX + (myFrontGears * myGearWidth) + (myFrontGears * myGearSpacing)) + i * (myGearWidth + myGearSpacing), myGearY + i * (myGearHeight / (myRearGears * 2)), myGearWidth, myGearHeight - i * (myGearHeight / myRearGears), myColorGearSelected);
-      sprGearGraph.drawRect(20 + (myGearX + (myFrontGears * myGearWidth) + (myFrontGears * myGearSpacing)) + i * (myGearWidth + myGearSpacing), myGearY + i * (myGearHeight / (myRearGears * 2)), myGearWidth, myGearHeight - i * (myGearHeight / myRearGears), myColorGearBorder);
+      sprGearingGraph.fillRect(20 + (myGearX + (myFrontGears * myGearWidth) + (myFrontGears * myGearSpacing)) + i * (myGearWidth + myGearSpacing), myGearY + i * (myGearHeight / (myRearGears * 2)), myGearWidth, myGearHeight - i * (myGearHeight / myRearGears), myColorGearSelected);
+      sprGearingGraph.drawRect(20 + (myGearX + (myFrontGears * myGearWidth) + (myFrontGears * myGearSpacing)) + i * (myGearWidth + myGearSpacing), myGearY + i * (myGearHeight / (myRearGears * 2)), myGearWidth, myGearHeight - i * (myGearHeight / myRearGears), myColorGearBorder);
     }
     else
     {
-      sprGearGraph.drawRect(20 + (myGearX + (myFrontGears * myGearWidth) + (myFrontGears * myGearSpacing)) + i * (myGearWidth + myGearSpacing), myGearY + i * (myGearHeight / (myRearGears * 2)), myGearWidth, myGearHeight - i * (myGearHeight / myRearGears), myColorGearBorder);
+      sprGearingGraph.drawRect(20 + (myGearX + (myFrontGears * myGearWidth) + (myFrontGears * myGearSpacing)) + i * (myGearWidth + myGearSpacing), myGearY + i * (myGearHeight / (myRearGears * 2)), myGearWidth, myGearHeight - i * (myGearHeight / myRearGears), myColorGearBorder);
     }
   }
 
-  sprGearGraph.pushSprite(((RESOLUTION_X/5)*2), 0);
-  sprGearGraph.deleteSprite();
+  sprGearingGraph.pushSprite(((RESOLUTION_X/5)*2), 0);
+  sprGearingGraph.deleteSprite();
 }
 
-void GearText(int selectedFrontGear, int selectedRearGear)
+void GearingText(int selectedFrontGear, int selectedRearGear)
 {
 // Size of Graph
-#define IWIDTH ((RESOLUTION_X/5)*2)
-#define IHEIGHT (RESOLUTION_Y / 2)
+#define IWIDTH ((RESOLUTION_X/5)*3)
+#define IHEIGHT ((RESOLUTION_Y / 5)*2)
 
   sprGearText.setColorDepth(16);
   sprGearText.createSprite(IWIDTH, IHEIGHT);
@@ -500,13 +514,13 @@ void GearText(int selectedFrontGear, int selectedRearGear)
   // Draw a background
   sprGearText.fillRect(0, 0, IWIDTH, IHEIGHT, myColorBgFont);
 
-  sprGearText.loadFont(digits);
+  sprGearText.loadFont(digits55);
   sprGearText.setTextColor(myColorFont, myColorBgFont);
   sprGearText.setTextDatum(MC_DATUM);
   sprGearText.drawString(String(selectedFrontGear + 1) + ":" + String(selectedRearGear + 1), IWIDTH / 2, (IHEIGHT / 2) + 5);
   sprGearText.unloadFont();
 
-  sprGearText.pushSprite(0, 0);
+  sprGearText.pushSprite(((RESOLUTION_X/5)*2), ((RESOLUTION_Y / 5)*3));
   sprGearText.deleteSprite();
 }
 
@@ -522,7 +536,7 @@ void PowerText(String strPower)
   // Draw a background
   sprPowerText.fillRect(0, 0, IWIDTH, IHEIGHT, myColorBgPower);
 
-  sprPowerText.loadFont(digits);
+  sprPowerText.loadFont(digits65);
   sprPowerText.setTextColor(myColorFont, myColorBgPower);
   sprPowerText.setTextDatum(MC_DATUM);
   sprPowerText.drawString(strPower, IWIDTH / 2, (IHEIGHT / 2) + 5);
@@ -535,7 +549,7 @@ void PowerText(String strPower)
 void CadenceText(String strCadence)
 {
 // Size of Graph
-#define IWIDTH ((RESOLUTION_X/5)*3)
+#define IWIDTH ((RESOLUTION_X/5)*2)
 #define IHEIGHT (RESOLUTION_Y / 2)
 
   sprCadenceText.setColorDepth(16);
@@ -544,13 +558,13 @@ void CadenceText(String strCadence)
   // Draw a background
   sprCadenceText.fillRect(0, 0, IWIDTH, IHEIGHT, myColorBgCadence);
 
-  sprCadenceText.loadFont(digits);
+  sprCadenceText.loadFont(digits65);
   sprCadenceText.setTextColor(myColorFont, myColorBgCadence);
   sprCadenceText.setTextDatum(MC_DATUM);
   sprCadenceText.drawString(strCadence, IWIDTH / 2, (IHEIGHT / 2) + 5);
   sprCadenceText.unloadFont();
 
-  sprCadenceText.pushSprite(((RESOLUTION_X/5)*2), IHEIGHT);
+  sprCadenceText.pushSprite(0, 0);
   sprCadenceText.deleteSprite();
 }
 
