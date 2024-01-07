@@ -10,8 +10,9 @@ TFT_eSPI tft = TFT_eSPI();
 TFT_eSprite sprDebug = TFT_eSprite(&tft);
 TFT_eSprite sprGearingGraph = TFT_eSprite(&tft);
 TFT_eSprite sprGearText = TFT_eSprite(&tft);
-TFT_eSprite sprPowerText = TFT_eSprite(&tft);
+TFT_eSprite sprPowerKgText = TFT_eSprite(&tft);
 TFT_eSprite sprCadenceText = TFT_eSprite(&tft);
+TFT_eSprite sprPowerText = TFT_eSprite(&tft);
 
 // RESOLUTION
 // 320 x 170 ... LILYGO T-Display-S3 ESP32-S3
@@ -19,10 +20,40 @@ TFT_eSprite sprCadenceText = TFT_eSprite(&tft);
 #define RESOLUTION_X 320
 #define RESOLUTION_Y 170
 
-// BUTTON
-#define BUTTON_PIN 0
+// BUTTON BOOT
+#define BUTTON_PIN_BOOT 0
 int intLastButtonState;
-bool bolToggleScreen = false;
+
+/*
+// BUTTON IO
+// TTGO ... PIN 35
+// S3   ... PIN 14
+#define BUTTON_PIN_IO 14
+bool bolButtonIO = false;
+*/
+
+//variables to keep track of the timing of recent interrupts
+unsigned long buttonTime = 0;
+unsigned long buttonTimeOld = 0; 
+
+int intPower = 0;
+// 0 = instant 1 = 3s, 2 = 10s
+int intTogglePowerMode = 0;
+unsigned long millisPower = 0;
+unsigned long millisPowerOld = 0;  
+
+// Weight Measurement
+float flUserWeight = 1;
+
+// Moving Average
+#define BUF_SIZE 50
+float array_calculate_avg(int * buf, int len);
+int buf[BUF_SIZE] = {0};
+int buf_index = 0;
+int buf_size_toggle = 1;
+float bufferMovingAverage = 0.0;
+unsigned long millisAverage = 0;  
+unsigned long millisAverageOld = 0;  
 
 // FONTS
 #define small NotoSansBold15
@@ -31,13 +62,15 @@ bool bolToggleScreen = false;
 
 // COLORS in RGB565
 // https://barth-dev.de/online/rgb565-color-picker/
+// https://trolsoft.ru/en/articles/rgb565-color-picker
 #define myColorGearBorder 0xFFFF
 #define myColorGearSelected 0xEB61
 #define myColorFont 0xFFFF
-#define myColorBgFont 0x02AE
-#define myColorBgPower 0xBBD4
+#define myColorBgGear 0x02AE
+#define myColorBgGearGraph 0x5454
+#define myColorBgPowerKg 0xBBD4
 #define myColorBgCadence 0x75D1
-#define myColorBackground 0x5454
+#define myColorBgPower 0xC32D
 
 // DEBUG
 int AdvertisingIntervalNew = 0;
@@ -46,9 +79,6 @@ int AdvertisingInterval = 0;
 
 // BLE Server name
 #define bleServerName "KICKR BIKE SHIFT 720C"
-
-// Weight
-float flUserWeight = 1;
 
 // Cadence
 // Crank Event Time
@@ -76,9 +106,13 @@ static BLEUUID charUUID11("a026e03a-0a7d-4ab3-97fa-f1500f9feb8b");
 static BLEUUID serviceUUID2("00001818-0000-1000-8000-00805f9b34fb");
 static BLEUUID charUUID21("00002a63-0000-1000-8000-00805f9b34fb");
 
-// Weigt Measurement
+// Weight Measurement
 static BLEUUID serviceUUID3("0000181c-0000-1000-8000-00805f9b34fb");
 static BLEUUID charUUID31("00002a98-0000-1000-8000-00805f9b34fb");
+
+// Heart Rate Measurement
+static BLEUUID serviceUUID4("0000180d-0000-1000-8000-00805f9b34fb");
+static BLEUUID charUUID41("00002a37-0000-1000-8000-00805f9b34fb");
 
 // Flags stating if should begin connecting and if the connection is up
 static boolean doConnect = false;
@@ -92,7 +126,7 @@ static BLEAddress *pServerAddress;
 BLERemoteCharacteristic *pRemoteCharacteristic_1;
 // Cycling Power Measurement
 BLERemoteCharacteristic *pRemoteCharacteristic_2;
-// Weight
+// Weight Measurement
 BLERemoteCharacteristic *pRemoteCharacteristic_3;
 
 void DisplayText(String myDebug)
@@ -113,23 +147,22 @@ void DisplayText(String myDebug)
   sprDebug.pushSprite(0, 0);
 }
 
-class MyClientCallback : public BLEClientCallbacks
-{
-  void onConnect(BLEClient *pClient)
-  {
+class MyClientCallback : public BLEClientCallbacks {
+  void onConnect(BLEClient *pClient) {
     DisplayText("We are connected");
+
+    // Change the parameters if we don't need fast response times
+    //pClient->updateConnParams(...,...,...,...);
   }
 
-  void onDisconnect(BLEClient *pClient)
-  {
+  void onDisconnect(BLEClient *pClient) {
     connected = false;
-    DisplayText("We are disconnected");
+    DisplayText("We are disconnected: " + String(pClient->getPeerAddress().toString().c_str()));
   }
 };
 
 // Connect to the BLE Server that has the name, Service, and Characteristics
-bool connectToServer(BLEAddress pAddress)
-{
+bool connectToServer(BLEAddress pAddress) {
   String myDisplay = "Forming a connection to " + String(pAddress.toString().c_str());
   DisplayText(myDisplay);
 
@@ -138,10 +171,21 @@ bool connectToServer(BLEAddress pAddress)
 
   // Status
   pClient->setClientCallbacks(new MyClientCallback());
+  
+  // pClient->setConnectionParams(...,...,...,...);
+  // Set how long we are willing to wait for the connection to complete (seconds), default is 30. */
+  // pClient->setConnectTimeout(5);  
 
-  // pClient->connect(pAddress);
   pClient->connect(pAddress, BLE_ADDR_TYPE_RANDOM);
-  DisplayText("We have connected to Server");
+
+  if(!pClient->isConnected()) {
+    if (!pClient->connect(pAddress)) {
+      DisplayText("Failed to connect");
+      return false;
+    }
+  }  
+
+  DisplayText("We have connected to Server: " + String(pClient->getPeerAddress().toString().c_str()) + " (RSSI: " + String(pClient->getRssi()) + ")");  
 
   // Gearing
   BLERemoteService *pRemoteService1 = pClient->getService(serviceUUID1);
@@ -165,7 +209,7 @@ bool connectToServer(BLEAddress pAddress)
   }
   DisplayText("Found our Service UUID2");
 
-  // Weight
+  // Weight Measurement
   BLERemoteService *pRemoteService3 = pClient->getService(serviceUUID3);
   if (pRemoteService3 == nullptr)
   {
@@ -192,7 +236,7 @@ bool connectToServer(BLEAddress pAddress)
     connected = false;
   }
 
-  // Weight
+  // Weight Measurement
   pRemoteCharacteristic_3 = pRemoteService3->getCharacteristic(charUUID31);
   if (connectCharacteristic3(pRemoteService3, pRemoteCharacteristic_3) == false)
   {
@@ -222,7 +266,7 @@ bool connectCharacteristic1(BLERemoteService *pRemoteService, BLERemoteCharacter
 
   // Assign callback functions for the Characteristic(s)
   if (pRemoteCharacteristic->canNotify())
-    pRemoteCharacteristic->registerForNotify(notifyCallback1);
+    pRemoteCharacteristic->registerForNotify(notifyGearing);
 
   return true;
 }
@@ -240,12 +284,12 @@ bool connectCharacteristic2(BLERemoteService *pRemoteService, BLERemoteCharacter
 
   // Assign callback functions for the Characteristic(s)
   if (pRemoteCharacteristic->canNotify())
-    pRemoteCharacteristic->registerForNotify(notifyCallback2);
+    pRemoteCharacteristic->registerForNotify(notifyCyclingPowerMeasurement);
 
   return true;
 }
 
-// Weight
+// Weight Measurement
 bool connectCharacteristic3(BLERemoteService *pRemoteService, BLERemoteCharacteristic *pRemoteCharacteristic)
 {
   // Obtain a reference to the characteristics in the service of the remote BLE server.
@@ -291,10 +335,25 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
     if (advertisedDevice.getName() == bleServerName)
     { // Check if the name of the advertiser matches
       DisplayText("Found the Device and are connecting ...");
-      advertisedDevice.getScan()->stop();                             // Scan can be stopped, we found what we are looking for
-      pServerAddress = new BLEAddress(advertisedDevice.getAddress()); // Address of advertiser is the one we need
-      doConnect = true;                                               // Set indicator, stating that we are ready to connect
+      // stop scan before connecting, we found what we are looking for
+      advertisedDevice.getScan()->stop();      
+      // Save the device reference (address of advertiser) in a global for the client to use
+      pServerAddress = new BLEAddress(advertisedDevice.getAddress());
+      // Set indicator, stating that we are ready to connect
+      doConnect = true;                                              
     }
+
+    // Connect to 2nd Server
+    // We have found a device, let us now see if it contains the service we are looking for.
+    /*
+    if (advertisedDevice.haveServiceUUID() && advertisedDevice.isAdvertisingService(serviceUUID0)) {
+      //BLEDevice::getScan()->stop();
+      myDevice = new BLEAdvertisedDevice(advertisedDevice);  // not used?
+      doConnect0 = true;
+      doScan0 = true;
+      Serial.print("Found serviceUUID0");
+    } // Found our server    
+    */
   }
 };
 
@@ -302,7 +361,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 // When the BLE Server sends a new value reading with the notify property
 int currentFrontGear = 0;
 int currentRearGear = 0;
-static void notifyCallback1(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
+static void notifyGearing(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
 {
   // Gears
   // 2 ... # Selected Gear in Front
@@ -333,16 +392,17 @@ static void notifyCallback1(BLERemoteCharacteristic *pBLERemoteCharacteristic, u
   */
 }
 
-// Cycling Power Measurement
-static void notifyCallback2(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
-{
-  // DEBUG --------
-  AdvertisingIntervalNew = millis();
-  AdvertisingInterval = (AdvertisingIntervalNew-AdvertisingIntervalOld);
-  Serial.println("(" + String(AdvertisingIntervalNew) + " - " + String(AdvertisingIntervalOld) + ") = " + String(AdvertisingInterval));  
-  AdvertisingIntervalOld = AdvertisingIntervalNew;
-  // END DEBUG ----
+// Moving Average with a circular buffer
+float array_calculate_avg(int * buf, int len) {
+    int sum = 0;
+    for (int i = 0; i < len; ++i) {
+      sum += buf[i];        
+    }
+    return ((float) sum) / ((float) len);
+}
 
+// Cycling Power Measurement
+static void notifyCyclingPowerMeasurement(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify) {
   // According to the GATT Specification Supplement (Bluetooth Specification) the following values are submitted
   // [0][1] ... Flags field = [3C][00] == "00000000 00111100" (Mandatory)
   // [2][3] ... Instantaneous Power (Mandatory)
@@ -357,11 +417,19 @@ static void notifyCallback2(BLERemoteCharacteristic *pBLERemoteCharacteristic, u
   // so lets swap bytes and then combine two uint8_t as uint16_tbit
   // bitshift the left by 8 bits to make them the 8 most significant bits of our new value
   uint16_t tmp16 = (pData[3] << 8 | pData[2]);
-  int intPower = (int)(tmp16);
-  float flPowerToWeight = (float(intPower) / float(flUserWeight));
+  intPower = (int)(tmp16);
+
+  // OLD AVERAGE
+
+
+  // // DEBUG --------
+  // AdvertisingIntervalNew = millis();
+  // AdvertisingInterval = (AdvertisingIntervalNew-AdvertisingIntervalOld);
+  // Serial.println("(" + String(AdvertisingIntervalNew) + " - " + String(AdvertisingIntervalOld) + ") = " + String(AdvertisingInterval) + " value --> " + String(intPower));
+  // AdvertisingIntervalOld = AdvertisingIntervalNew;
+  // END DEBUG ----  
 
   // Cadence
-
   // Last Crank Event Time (Unit is 1/1024 second)
   // Endianness is little-endian
   // so lets swap bytes and then combine two uint8_t as uint16_tbit
@@ -414,22 +482,24 @@ static void notifyCallback2(BLERemoteCharacteristic *pBLERemoteCharacteristic, u
   
   OldCrankEventTime = NewCrankEventTime;
   OldCrankRevolutions = NewCrankRevolutions;
-
-  // Button Toggle
-  if (bolToggleScreen)
-  {
-    // Action 1
-    PowerText(String(flPowerToWeight, 1));
-  }
-  else
-  {
-    // Action 2
-    PowerText(String(intPower));
-  }
 }
 
-void setup()
-{
+/*
+// IO Button Action
+void IRAM_ATTR toggleButtonIO() {
+  // Debounce Time (Debouncing an Interrupt)
+  buttonTime = millis();  
+  if (buttonTime - buttonTimeOld > 250) {
+    buttonTimeOld = buttonTime;
+    // NO ACTION HERE -> put it in loop()
+    // NEVER put Serial etc. here!
+    bolButtonIO = true;
+  }
+}
+*/
+
+void setup() {
+  // Bit per second (baud) for serial data transmission
   Serial.begin(250000);
 
   // Screen Setup
@@ -437,6 +507,14 @@ void setup()
   tft.begin();
   tft.setRotation(1);
   tft.fillScreen(TFT_MAGENTA);
+
+/*
+  // Buttons
+  // https://lastminuteengineers.com/handling-esp32-gpio-interrupts-tutorial/
+  // IO Button
+  pinMode(BUTTON_PIN_IO, INPUT);
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN_IO), toggleButtonIO, FALLING);
+*/
 
   // Init BLE device
   BLEDevice::init("");
@@ -447,6 +525,10 @@ void setup()
   // scan to run for 30 seconds.
   BLEScan *pBLEScan = BLEDevice::getScan();
   pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  // Amount of time (duration) between consecutive scans
+  // pBLEScan->setInterval(1349);
+  // Amount of time (duration) of the scan.
+  // pBLEScan->setWindow(449);  
   pBLEScan->setActiveScan(true);
   pBLEScan->start(30);
 }
@@ -462,7 +544,7 @@ void GearingGraph(int myFrontGears, int myRearGears, int selectedFrontGear, int 
   // create sprite with size of screen
   sprGearingGraph.createSprite(IWIDTH, IHEIGHT);
   // Background Color
-  sprGearingGraph.fillSprite(myColorBackground);
+  sprGearingGraph.fillSprite(myColorBgGearGraph);
 
   int myGearWidth = (IWIDTH - 30) / (myFrontGears + myRearGears);
   #define myGearHeight (RESOLUTION_Y - 90)
@@ -471,29 +553,21 @@ void GearingGraph(int myFrontGears, int myRearGears, int selectedFrontGear, int 
   #define myGearY 10
 
   // FRONT GEARS (CHAINRINGS/CRANKSET)
-  for (int i = 0; i < (myFrontGears); i++)
-  {
-    if (selectedFrontGear == i)
-    {
+  for (int i = 0; i < (myFrontGears); i++) {
+    if (selectedFrontGear == i) {
       sprGearingGraph.fillRect(myGearX + i * (myGearWidth + myGearSpacing), myGearY + (myFrontGears - i - 1) * (myGearHeight / (myFrontGears * 2)), myGearWidth, (i + 1) * (myGearHeight / myFrontGears), myColorGearSelected);
       sprGearingGraph.drawRect(myGearX + i * (myGearWidth + myGearSpacing), myGearY + (myFrontGears - i - 1) * (myGearHeight / (myFrontGears * 2)), myGearWidth, (i + 1) * (myGearHeight / myFrontGears), myColorGearBorder);
-    }
-    else
-    {
+    } else {
       sprGearingGraph.drawRect(myGearX + i * (myGearWidth + myGearSpacing), myGearY + (myFrontGears - i - 1) * (myGearHeight / (myFrontGears * 2)), myGearWidth, (i + 1) * (myGearHeight / myFrontGears), myColorGearBorder);
     }
   }
 
   // REAR GEARS (CASSETTE)
-  for (int i = 0; i < (myRearGears); i++)
-  {
-    if (selectedRearGear == i)
-    {
+  for (int i = 0; i < (myRearGears); i++) {
+    if (selectedRearGear == i) {
       sprGearingGraph.fillRect(20 + (myGearX + (myFrontGears * myGearWidth) + (myFrontGears * myGearSpacing)) + i * (myGearWidth + myGearSpacing), myGearY + i * (myGearHeight / (myRearGears * 2)), myGearWidth, myGearHeight - i * (myGearHeight / myRearGears), myColorGearSelected);
       sprGearingGraph.drawRect(20 + (myGearX + (myFrontGears * myGearWidth) + (myFrontGears * myGearSpacing)) + i * (myGearWidth + myGearSpacing), myGearY + i * (myGearHeight / (myRearGears * 2)), myGearWidth, myGearHeight - i * (myGearHeight / myRearGears), myColorGearBorder);
-    }
-    else
-    {
+    } else {
       sprGearingGraph.drawRect(20 + (myGearX + (myFrontGears * myGearWidth) + (myFrontGears * myGearSpacing)) + i * (myGearWidth + myGearSpacing), myGearY + i * (myGearHeight / (myRearGears * 2)), myGearWidth, myGearHeight - i * (myGearHeight / myRearGears), myColorGearBorder);
     }
   }
@@ -502,33 +576,31 @@ void GearingGraph(int myFrontGears, int myRearGears, int selectedFrontGear, int 
   sprGearingGraph.deleteSprite();
 }
 
-void GearingText(int selectedFrontGear, int selectedRearGear)
-{
-// Size of Graph
-#define IWIDTH ((RESOLUTION_X/5)*3)
-#define IHEIGHT ((RESOLUTION_Y / 5)*2)
+void GearingText(int selectedFrontGear, int selectedRearGear) {
+  // Size of Graph
+  #define IWIDTH (((RESOLUTION_X/5)*3)/2)
+  #define IHEIGHT ((RESOLUTION_Y / 5)*2)
 
   sprGearText.setColorDepth(16);
   sprGearText.createSprite(IWIDTH, IHEIGHT);
-  sprGearText.fillSprite(myColorBgFont);
+  sprGearText.fillSprite(myColorBgGear);
   // Draw a background
-  sprGearText.fillRect(0, 0, IWIDTH, IHEIGHT, myColorBgFont);
+  sprGearText.fillRect(0, 0, IWIDTH, IHEIGHT, myColorBgGear);
 
   sprGearText.loadFont(digits55);
-  sprGearText.setTextColor(myColorFont, myColorBgFont);
+  sprGearText.setTextColor(myColorFont, myColorBgGear);
   sprGearText.setTextDatum(MC_DATUM);
   sprGearText.drawString(String(selectedFrontGear + 1) + ":" + String(selectedRearGear + 1), IWIDTH / 2, (IHEIGHT / 2) + 5);
   sprGearText.unloadFont();
 
-  sprGearText.pushSprite(((RESOLUTION_X/5)*2), ((RESOLUTION_Y / 5)*3));
+  sprGearText.pushSprite(((RESOLUTION_X/5)*2)+IWIDTH, ((RESOLUTION_Y / 5)*3));
   sprGearText.deleteSprite();
 }
 
-void PowerText(String strPower)
-{
-// Size of Graph
-#define IWIDTH ((RESOLUTION_X/5)*2)
-#define IHEIGHT (RESOLUTION_Y / 2)
+void PowerText(String strPower) {
+  // Size of Graph
+  #define IWIDTH (((RESOLUTION_X/5)*3)/2)
+  #define IHEIGHT ((RESOLUTION_Y / 5)*2)
 
   sprPowerText.setColorDepth(16);
   sprPowerText.createSprite(IWIDTH, IHEIGHT);
@@ -536,21 +608,42 @@ void PowerText(String strPower)
   // Draw a background
   sprPowerText.fillRect(0, 0, IWIDTH, IHEIGHT, myColorBgPower);
 
-  sprPowerText.loadFont(digits65);
+  sprPowerText.loadFont(digits55);
   sprPowerText.setTextColor(myColorFont, myColorBgPower);
   sprPowerText.setTextDatum(MC_DATUM);
   sprPowerText.drawString(strPower, IWIDTH / 2, (IHEIGHT / 2) + 5);
   sprPowerText.unloadFont();
 
-  sprPowerText.pushSprite(0, IHEIGHT);
-  sprPowerText.deleteSprite();
+  sprPowerText.pushSprite(((RESOLUTION_X/5)*2), ((RESOLUTION_Y / 5)*3));
+  sprPowerText.deleteSprite();  
+}
+
+void PowerKgText(String strPower) {
+  // Size of Graph
+  #define IWIDTH ((RESOLUTION_X/5)*2)
+  #define IHEIGHT (RESOLUTION_Y / 2)
+
+  sprPowerKgText.setColorDepth(16);
+  sprPowerKgText.createSprite(IWIDTH, IHEIGHT);
+  sprPowerKgText.fillSprite(myColorBgPowerKg);
+  // Draw a background
+  sprPowerKgText.fillRect(0, 0, IWIDTH, IHEIGHT, myColorBgPowerKg);
+
+  sprPowerKgText.loadFont(digits65);
+  sprPowerKgText.setTextColor(myColorFont, myColorBgPowerKg);
+  sprPowerKgText.setTextDatum(MC_DATUM);
+  sprPowerKgText.drawString(strPower, IWIDTH / 2, (IHEIGHT / 2) + 5);
+  sprPowerKgText.unloadFont();
+
+  sprPowerKgText.pushSprite(0, IHEIGHT);
+  sprPowerKgText.deleteSprite();
 }
 
 void CadenceText(String strCadence)
 {
-// Size of Graph
-#define IWIDTH ((RESOLUTION_X/5)*2)
-#define IHEIGHT (RESOLUTION_Y / 2)
+  // Size of Graph
+  #define IWIDTH ((RESOLUTION_X/5)*2)
+  #define IHEIGHT (RESOLUTION_Y / 2)
 
   sprCadenceText.setColorDepth(16);
   sprCadenceText.createSprite(IWIDTH, IHEIGHT);
@@ -568,42 +661,89 @@ void CadenceText(String strCadence)
   sprCadenceText.deleteSprite();
 }
 
-void loop()
-{
+void loop() {
   // If the flag "doConnect" is true then we have scanned for and found the desired
   // BLE Server with which we wish to connect.  Now we connect to it.  Once we are
   // connected we set the connected flag to be true.
-  if (doConnect == true)
-  {
-    if (connectToServer(*pServerAddress))
-    {
+  if (doConnect == true) {
+    if (connectToServer(*pServerAddress)) {
       DisplayText("Connected to BLE Server");
-    }
-    else
-    {
+    } else {
       DisplayText("Failed to connect - Restart to scan");
     }
     doConnect = false;
   }
 
+/*
   // BUTTON ACTION
-  int intButtonState = digitalRead(BUTTON_PIN);
+  if (bolButtonIO) {
+    // ACTION
 
-  if (intLastButtonState != intButtonState)
-  {
+    bolButtonIO = false;
+  }  
+*/
+
+  int intBootButtonState = digitalRead(BUTTON_PIN_BOOT);
+  if (intLastButtonState != intBootButtonState) {
     // Debounce Time
     delay(50);
-
-    if (intButtonState == LOW)
-    {
-      // Press Action
+    if (intBootButtonState == LOW) {
       // Toggle Button State
-      bolToggleScreen = !bolToggleScreen;
-    }
-    else
-    {
+      intTogglePowerMode++;
+      if (intTogglePowerMode > 2) intTogglePowerMode = 0; 
+
+      // Press Action
+      switch (intTogglePowerMode) {
+        case 0:
+          // instant
+          PowerText("INST");
+          PowerKgText("INST");
+          buf_size_toggle = 1;
+          break;
+        case 1:      
+          // 3s
+          PowerText("3s");
+          PowerKgText("3s");        
+          buf_size_toggle = 15;
+          break;
+        case 2:
+          // 10s
+          PowerText("10s");
+          PowerKgText("10s");                
+          buf_size_toggle = BUF_SIZE;
+          break;
+      }        
+    } else {
       // Release Action
     }
-    intLastButtonState = intButtonState;
+    intLastButtonState = intBootButtonState;
+  }  
+
+  // Moving Average
+  // Notifies are sent between 100-300ms - we update every 200ms so we don't miss a update
+  millisAverage = millis();
+  if (millisAverage - millisAverageOld >= 200) {
+    // Reset the index and start over.
+    if (buf_index >= buf_size_toggle) buf_index = 0;
+
+    buf[buf_index++] = intPower;
+    bufferMovingAverage = array_calculate_avg(buf, buf_size_toggle);
+    //Serial.println("Index " + String(buf_index) + " Timespan " + String(millisAverage - millisAverageOld) + " Buffer Size: " + String(buf_size_toggle) + " Average: " + String(bufferMovingAverage));
+
+    millisAverageOld = millisAverage;
   }
+
+  // UPDATE DISPLAY everey x ms
+  millisPower = millis();
+  if (millisPower-millisPowerOld >= 500){ 
+    if (intTogglePowerMode == 0) {
+      PowerText(String(intPower));
+      PowerKgText(String((float(intPower) / float(flUserWeight)), 1));
+    } else {
+      PowerText(String(bufferMovingAverage, 0));
+      PowerKgText(String((float(bufferMovingAverage) / float(flUserWeight)), 1));
+    }
+
+    millisPowerOld = millisPower;
+  }    
 }
