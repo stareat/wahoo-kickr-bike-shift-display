@@ -129,8 +129,7 @@ BLERemoteCharacteristic *pRemoteCharacteristic_2;
 // Weight Measurement
 BLERemoteCharacteristic *pRemoteCharacteristic_3;
 
-void DisplayText(String myDebug)
-{
+void DisplayText(String myDebug) {
   sprDebug.createSprite(RESOLUTION_X, RESOLUTION_Y);
   sprDebug.fillSprite(TFT_BLACK);
   // sprDebug.fillScreen(TFT_BLACK);
@@ -189,8 +188,7 @@ bool connectToServer(BLEAddress pAddress) {
 
   // Gearing
   BLERemoteService *pRemoteService1 = pClient->getService(serviceUUID1);
-  if (pRemoteService1 == nullptr)
-  {
+  if (pRemoteService1 == nullptr) {
     myDisplay = "Failed to find our service UUID1: " + String(serviceUUID1.toString().c_str());
     DisplayText(myDisplay);
     pClient->disconnect();
@@ -200,8 +198,7 @@ bool connectToServer(BLEAddress pAddress) {
 
   // Cycling Power Measurement
   BLERemoteService *pRemoteService2 = pClient->getService(serviceUUID2);
-  if (pRemoteService2 == nullptr)
-  {
+  if (pRemoteService2 == nullptr) {
     myDisplay = "Failed to find our service UUID2: " + String(serviceUUID2.toString().c_str());
     DisplayText(myDisplay);
     pClient->disconnect();
@@ -211,8 +208,7 @@ bool connectToServer(BLEAddress pAddress) {
 
   // Weight Measurement
   BLERemoteService *pRemoteService3 = pClient->getService(serviceUUID3);
-  if (pRemoteService3 == nullptr)
-  {
+  if (pRemoteService3 == nullptr) {
     myDisplay = "Failed to find our service UUID3: " + String(serviceUUID3.toString().c_str());
     DisplayText(myDisplay);
     pClient->disconnect();
@@ -224,27 +220,23 @@ bool connectToServer(BLEAddress pAddress) {
 
   // Gearing
   pRemoteCharacteristic_1 = pRemoteService1->getCharacteristic(charUUID11);
-  if (connectCharacteristic1(pRemoteService1, pRemoteCharacteristic_1) == false)
-  {
+  if (connectCharacteristic1(pRemoteService1, pRemoteCharacteristic_1) == false) {
     connected = false;
   }
 
   // Cycling Power Measurement
   pRemoteCharacteristic_2 = pRemoteService2->getCharacteristic(charUUID21);
-  if (connectCharacteristic2(pRemoteService2, pRemoteCharacteristic_2) == false)
-  {
+  if (connectCharacteristic2(pRemoteService2, pRemoteCharacteristic_2) == false) {
     connected = false;
   }
 
   // Weight Measurement
   pRemoteCharacteristic_3 = pRemoteService3->getCharacteristic(charUUID31);
-  if (connectCharacteristic3(pRemoteService3, pRemoteCharacteristic_3) == false)
-  {
+  if (connectCharacteristic3(pRemoteService3, pRemoteCharacteristic_3) == false) {
     connected = false;
   }
 
-  if (connected == false)
-  {
+  if (connected == false) {
     pClient->disconnect();
     DisplayText("Characteristic UUID(s) not found");
     return false;
@@ -254,11 +246,9 @@ bool connectToServer(BLEAddress pAddress) {
 }
 
 // Gearing
-bool connectCharacteristic1(BLERemoteService *pRemoteService, BLERemoteCharacteristic *pRemoteCharacteristic)
-{
+bool connectCharacteristic1(BLERemoteService *pRemoteService, BLERemoteCharacteristic *pRemoteCharacteristic) {
   // Obtain a reference to the characteristics in the service of the remote BLE server.
-  if (pRemoteCharacteristic == nullptr)
-  {
+  if (pRemoteCharacteristic == nullptr) {
     DisplayText("Failed to find our characteristic UUID1");
     return false;
   }
@@ -272,11 +262,9 @@ bool connectCharacteristic1(BLERemoteService *pRemoteService, BLERemoteCharacter
 }
 
 // Cycling Power Measurement
-bool connectCharacteristic2(BLERemoteService *pRemoteService, BLERemoteCharacteristic *pRemoteCharacteristic)
-{
+bool connectCharacteristic2(BLERemoteService *pRemoteService, BLERemoteCharacteristic *pRemoteCharacteristic) {
   // Obtain a reference to the characteristics in the service of the remote BLE server.
-  if (pRemoteCharacteristic == nullptr)
-  {
+  if (pRemoteCharacteristic == nullptr) {
     DisplayText("Failed to find our characteristic UUID2");
     return false;
   }
@@ -290,11 +278,9 @@ bool connectCharacteristic2(BLERemoteService *pRemoteService, BLERemoteCharacter
 }
 
 // Weight Measurement
-bool connectCharacteristic3(BLERemoteService *pRemoteService, BLERemoteCharacteristic *pRemoteCharacteristic)
-{
+bool connectCharacteristic3(BLERemoteService *pRemoteService, BLERemoteCharacteristic *pRemoteCharacteristic) {
   // Obtain a reference to the characteristics in the service of the remote BLE server.
-  if (pRemoteCharacteristic == nullptr)
-  {
+  if (pRemoteCharacteristic == nullptr) {
     DisplayText("Failed to find our characteristic UUID3");
     return false;
   }
@@ -325,15 +311,13 @@ bool connectCharacteristic3(BLERemoteService *pRemoteService, BLERemoteCharacter
 }
 
 // Callback function that gets called, when another device's advertisement has been received
-class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
-{
-  void onResult(BLEAdvertisedDevice advertisedDevice)
-  {
+class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
+  void onResult(BLEAdvertisedDevice advertisedDevice) {
     String myDisplay = "BLE Advertised Device found: " + String(advertisedDevice.toString().c_str());
     DisplayText(myDisplay);
 
-    if (advertisedDevice.getName() == bleServerName)
-    { // Check if the name of the advertiser matches
+    if (advertisedDevice.getName() == bleServerName) { 
+      // Check if the name of the advertiser matches
       DisplayText("Found the Device and are connecting ...");
       // stop scan before connecting, we found what we are looking for
       advertisedDevice.getScan()->stop();      
@@ -361,8 +345,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 // When the BLE Server sends a new value reading with the notify property
 int currentFrontGear = 0;
 int currentRearGear = 0;
-static void notifyGearing(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
-{
+static void notifyGearing(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify) {
   // Gears
   // 2 ... # Selected Gear in Front
   // 3 ... # Selected Gear in Rear
@@ -372,8 +355,7 @@ static void notifyGearing(BLERemoteCharacteristic *pBLERemoteCharacteristic, uin
   // String strDebug = "Gearing:" + String(pData[4]) + ":" + String(pData[5]) + "\n" + "Selected Gears:" + String(pData[2]) + ":" + String(pData[3]);
   // DisplayText(strDebug);
 
-  if (currentFrontGear != pData[2] || currentRearGear != pData[3])
-  {
+  if (currentFrontGear != pData[2] || currentRearGear != pData[3]) {
     // Draw Graphics
     GearingGraph(pData[4], pData[5], pData[2], pData[3]);
     GearingText(pData[2], pData[3]);
@@ -418,9 +400,6 @@ static void notifyCyclingPowerMeasurement(BLERemoteCharacteristic *pBLERemoteCha
   // bitshift the left by 8 bits to make them the 8 most significant bits of our new value
   uint16_t tmp16 = (pData[3] << 8 | pData[2]);
   intPower = (int)(tmp16);
-
-  // OLD AVERAGE
-
 
   // // DEBUG --------
   // AdvertisingIntervalNew = millis();
@@ -470,9 +449,7 @@ static void notifyCyclingPowerMeasurement(BLERemoteCharacteristic *pBLERemoteCha
   }
 
   //Just some init correction
-  if (Cadence > 1000) { Cadence=0; }
-
-  CadenceText(String(Cadence));
+  if (Cadence > 1000) { Cadence=0; }  
   
   // Serial.println("DiffCrankEventTime: " + String(DiffCrankEventTime));
   // Serial.println("CrankEventTime: " + String(CrankEventTime));
@@ -538,7 +515,7 @@ void GearingGraph(int myFrontGears, int myRearGears, int selectedFrontGear, int 
 {
   // Size of Graph
   #define IWIDTH ((RESOLUTION_X/5)*3)
-  #define IHEIGHT RESOLUTION_Y
+  #define IHEIGHT ((RESOLUTION_Y / 5)*3)
 
   sprGearingGraph.setColorDepth(16);
   // create sprite with size of screen
@@ -735,7 +712,8 @@ void loop() {
 
   // UPDATE DISPLAY everey x ms
   millisPower = millis();
-  if (millisPower-millisPowerOld >= 500){ 
+  if (millisPower-millisPowerOld >= 1000){ 
+    // POWER
     if (intTogglePowerMode == 0) {
       PowerText(String(intPower));
       PowerKgText(String((float(intPower) / float(flUserWeight)), 1));
@@ -743,6 +721,9 @@ void loop() {
       PowerText(String(bufferMovingAverage, 0));
       PowerKgText(String((float(bufferMovingAverage) / float(flUserWeight)), 1));
     }
+
+    // CADENCE
+    CadenceText(String(Cadence));
 
     millisPowerOld = millisPower;
   }    
