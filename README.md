@@ -14,7 +14,8 @@ https://github.com/teastainGit/LilyGO-T-display-S3-setup-and-examples/blob/main/
 
 ### ESP32 Core for Arduino IDE Version 
 Code is written for the latest stable version (v2.0.14) and does not work with the pre-release 3.0.x as there are some changes to the BLE library.
-(https://docs.espressif.com/projects/arduino-esp32/en/latest/migration_guides/2.x_to_3.0.html)
+https://docs.espressif.com/projects/arduino-esp32/en/latest/migration_guides/2.x_to_3.0.html
+
 Documentation on how to install the ESP32 Core can be found here:
 https://docs.espressif.com/projects/arduino-esp32/en/latest/installing.html
 
