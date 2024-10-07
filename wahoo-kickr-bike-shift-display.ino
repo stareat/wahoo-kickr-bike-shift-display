@@ -78,7 +78,7 @@ int AdvertisingIntervalOld = 0;
 int AdvertisingInterval = 0;
 
 // BLE Server name
-#define bleServerName "KICKR BIKE SHIFT 720C"
+#define bleServerName "KICKR BIKE SHIFT 5AF9"
 
 // Cadence
 // Crank Event Time
@@ -290,7 +290,7 @@ bool connectCharacteristic3(BLERemoteService *pRemoteService, BLERemoteCharacter
   if(pRemoteCharacteristic->canRead()) {
 
     // we're expecting a 2 Byte HEX value eg "D039" 
-    std::string rxValue = pRemoteCharacteristic->readValue();
+    std::string rxValue = pRemoteCharacteristic->readValue().c_str();
 
     /*
     // DEBUG
