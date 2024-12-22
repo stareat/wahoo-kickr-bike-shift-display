@@ -290,7 +290,7 @@ bool connectCharacteristic3(BLERemoteService *pRemoteService, BLERemoteCharacter
   if(pRemoteCharacteristic->canRead()) {
 
     // we're expecting a 2 Byte HEX value eg "D039" 
-    std::string rxValue = pRemoteCharacteristic->readValue();
+    std::string rxValue = pRemoteCharacteristic->readValue().c_str();
 
     /*
     // DEBUG
